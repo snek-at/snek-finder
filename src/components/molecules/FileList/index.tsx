@@ -13,14 +13,8 @@ type FileListItems = {
 
 const prepareData = (items: FileListItems) => {
   return items.map(e => ({
-    fileName: (
-      <>
-        <HStack spacing={5}>
-          {e.prefix}
-          <Text>{e.name}</Text>
-        </HStack>
-      </>
-    ),
+    prefix: e.prefix,
+    fileName: e.name,
     fileLastModifiedAt: e.modifiedAt,
     fileSize: e.fileSize || '-',
     isDropzone: e.isFolder
@@ -31,7 +25,13 @@ const columns = [
   {
     Header: 'Name',
     accessor: 'fileName',
-    width: '78%'
+    width: '80%',
+    Cell: ({row}: any) => (
+      <HStack>
+        {row.original.prefix}
+        <Text>{row.original.fileName}</Text>
+      </HStack>
+    )
   },
   {
     Header: 'Last modified',

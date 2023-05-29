@@ -2,6 +2,7 @@ import {TriangleDownIcon, TriangleUpIcon} from '@chakra-ui/icons'
 import {
   Box,
   chakra,
+  Input, // Added import
   Table,
   Tbody,
   Th,
@@ -31,6 +32,7 @@ type TableProps = {
 const TheTable: React.FC<TableProps> = props => {
   const [records, setRecords] = useState(props.records)
   const [selectedRows, setSelectedRows] = useState<number[]>([]) // currently only one selection is supported
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     setRecords(props.records)
@@ -102,22 +104,33 @@ const TheTable: React.FC<TableProps> = props => {
     }
   }
 
-  const {
-    getTableProps,
-    getTableBodyProps,
-    headerGroups,
-    rows,
-    prepareRow
-  } = useTable(
-    {
-      data: records,
-      columns: props.columns,
-      initialState: props.initialState,
-      //@ts-ignore
-      autoResetFilters: false,
-      autoResetSortBy: false
-    },
-    useSortBy
+  const {getTableProps, getTableBodyProps, headerGroups, rows, prepareRow} =
+    useTable(
+      {
+        data: records,
+        columns: props.columns,
+        initialState: props.initialState,
+        //@ts-ignore
+        autoResetFilters: false,
+        autoResetSortBy: false
+      },
+      useSortBy
+    )
+
+  // Filter the rows based on the search query
+
+  console.log('rows', rows)
+
+  const filteredRows = rows.filter(row =>
+    Object.values(row.original).some(value => {
+      if (value !== undefined && value !== null) {
+        return value
+          .toString()
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      }
+      return false
+    })
   )
 
   return (
@@ -125,6 +138,12 @@ const TheTable: React.FC<TableProps> = props => {
       <Box
         onClick={handleContainerClick}
         onContextMenu={handleContainerContextMenu}>
+        <Input
+          placeholder="Search"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          mb={4}
+        />
         <Table {...getTableProps()}>
           <Thead
             position="sticky"
@@ -154,7 +173,7 @@ const TheTable: React.FC<TableProps> = props => {
             ))}
           </Thead>
           <Tbody {...getTableBodyProps()}>
-            {rows.map(row => {
+            {filteredRows.map(row => {
               prepareRow(row)
 
               const index = row.index
