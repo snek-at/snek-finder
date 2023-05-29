@@ -413,16 +413,16 @@ const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
       const fileItem = item as FinderFileItem
 
       if (folderItem.isFolder) {
-        prefix = <Icon as={FaFolder} w={6} h={6} />
+        prefix = <Icon as={FaFolder} boxSize="16" />
       } else {
         const {mimeType, src} = fileItem
 
         if (mimeType && mimeType.startsWith('image/')) {
-          prefix = <Image w={6} h={6} src={src}></Image>
+          prefix = <Image boxSize="16" src={src}></Image>
         } else if (mimeType && mimeType.startsWith('application/pdf')) {
-          prefix = <Icon as={FaFilePdf} w={6} h={6} />
+          prefix = <Icon as={FaFilePdf} boxSize="16" />
         } else {
-          prefix = <Icon as={FaFile} w={6} h={6} />
+          prefix = <Icon as={FaFile} boxSize="16" />
         }
       }
 
@@ -519,9 +519,10 @@ const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
                   ? [
                       {
                         _type: 'ITEM',
-                        content: <>{mode === 'selector' ? 'Select' : 'Open'}</>,
+                        content: <>Select</>,
                         onItemClick: handleFileOpen
                       },
+
                       {
                         _type: 'ITEM',
                         content: <>{'Rename'}</>,
