@@ -589,9 +589,10 @@ const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
           isOpen={true}
           onClose={props.onSelectorClose}
           isCentered
-          scrollBehavior="inside">
+          scrollBehavior="inside"
+          size="6xl">
           <ModalOverlay />
-          <ModalContent minW={'8xl'} minH="85vh">
+          <ModalContent minH="85vh">
             <ModalHeader>SnekFinder - Selector</ModalHeader>
             <ModalCloseButton />
             <Box px={4}>
