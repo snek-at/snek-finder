@@ -75,7 +75,7 @@ const Toolbar: React.FC<ToolbarProos> = props => {
             {props.view === 'LIST' && (
               <IconButton
                 bg="transparent"
-                disabled
+                isDisabled
                 icon={<FaTh />}
                 aria-label=""
               />
