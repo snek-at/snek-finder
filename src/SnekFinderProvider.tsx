@@ -35,26 +35,27 @@ export const SnekFinderProvider: React.FC<
   React.useEffect(() => {
     const fn = async () => {
       let index = await backend.readIndex()
+      const storedInitDataLink = localStorage.getItem('initDataLink')
 
-      if (!index && initDataLink) {
-        try {
-          await backend.downloadIndex(initDataLink)
-        } catch {
-          console.log('downloadIndex error')
+      if (initDataLink) {
+        if (!index || storedInitDataLink !== initDataLink) {
+          try {
+            await backend.downloadIndex(initDataLink)
+            localStorage.setItem('initDataLink', initDataLink)
+            index = await backend.readIndex()
+          } catch {
+            console.log('downloadIndex error')
+          }
         }
-
-        index = await backend.readIndex()
       }
 
-      if (index) {
-        if (JSON.stringify(index) !== JSON.stringify(initData)) {
-          setInitData(index)
-        }
+      if (index && JSON.stringify(index) !== JSON.stringify(initData)) {
+        setInitData(index)
       }
     }
 
     fn()
-  })
+  }, [backend, initDataLink])
 
   rootFileId = rootFileId || 'ae4b3bf8-6ed2-4ac6-bf18-722321af298c'
 
