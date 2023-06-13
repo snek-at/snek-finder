@@ -52,11 +52,10 @@ export const useSnekFinder = ({
     fn()
   }, [isSelectorOpen])
 
-  const [openFile, setOpenFile] =
-    React.useState<{
-      fileId: string
-      previewType: 'IMAGE_VIEWER' | 'PDF_VIEWER'
-    } | null>(null)
+  const [openFile, setOpenFile] = React.useState<{
+    fileId: string
+    previewType: 'IMAGE_VIEWER' | 'PDF_VIEWER'
+  } | null>(null)
 
   const openedFileItem = React.useMemo(() => {
     if (!openFile) {
@@ -134,17 +133,20 @@ export const useSnekFinder = ({
             <ImageViewer
               src={openedFileItem.src}
               name={openedFileItem.name}
-              onUpdate={async ({blob, dataURL, fileName}) => {
+              onUpdate={async (
+                blob,
+                {fullName, imageBase64, extension, mimeType}
+              ) => {
                 const fileId = openFile.fileId
 
                 setData(data => {
-                  if (fileName) {
+                  if (fullName) {
                     return {
                       ...data,
                       [fileId]: {
                         ...data[fileId],
-                        src: dataURL,
-                        name: fileName
+                        src: imageBase64!,
+                        name: fullName
                       }
                     }
                   } else {
@@ -152,7 +154,7 @@ export const useSnekFinder = ({
                       ...data,
                       [fileId]: {
                         ...data[fileId],
-                        src: dataURL
+                        src: imageBase64!
                       }
                     }
                   }
@@ -160,8 +162,10 @@ export const useSnekFinder = ({
 
                 // upload blob to backend
                 if (blob) {
-                  const url = await backend.upload(
-                    new File([blob], openedFileItem.name)
+                  const uploaded = await backend.upload(
+                    new File([blob], openedFileItem.name, {
+                      type: mimeType
+                    })
                   )
 
                   setData(data => {
@@ -169,7 +173,8 @@ export const useSnekFinder = ({
                       ...data,
                       [fileId]: {
                         ...data[fileId],
-                        src: url
+                        src: uploaded.src,
+                        previewSrc: uploaded.previewSrc
                       }
                     }
 

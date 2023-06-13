@@ -119,8 +119,6 @@ const TheTable: React.FC<TableProps> = props => {
 
   // Filter the rows based on the search query
 
-  console.log('rows', rows)
-
   const filteredRows = rows.filter(row =>
     Object.values(row.original).some(value => {
       if (value !== undefined && value !== null) {

@@ -11,6 +11,18 @@ export class OSGBackend extends Backend {
   async upload(file: File) {
     const url = 'https://osg.snek.at/storage'
 
+    console.log('uploading file', file)
+
+    // add correct extension to filename if missing
+    if (!file.name.includes('.')) {
+      const mimeType = file.type
+      const ext = mimeType.split('/')[1]
+
+      file = new File([file], `${file.name}.${ext}`, {
+        type: mimeType
+      })
+    }
+
     const formData = new FormData()
     formData.append('file', file)
 
@@ -21,7 +33,15 @@ export class OSGBackend extends Backend {
 
     const json = await resp.json()
 
-    return `${url}/${json.file_id}`
+    const src = `${url}/${json.file_id}`
+    const previewSrc = json.thumb?.file_id
+      ? `${url}/${json.thumb.file_id}`
+      : undefined
+
+    return {
+      src,
+      previewSrc
+    }
   }
 }
 

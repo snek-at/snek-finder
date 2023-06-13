@@ -17,13 +17,14 @@ import {FaSearchMinus} from '@react-icons/all-files/fa/FaSearchMinus'
 import {FaSearchPlus} from '@react-icons/all-files/fa/FaSearchPlus'
 import {useState} from 'react'
 import {TransformComponent, TransformWrapper} from 'react-zoom-pan-pinch'
-import SnekStudio from '../../molecules/SnekStudio'
+import SnekStudio, {SnekStudioProps} from '../../molecules/SnekStudio'
+import {SnekFinderProps} from '../Finder'
 
 export type ImageViewerProps = {
   src: string
   name: string
   onClose: () => void
-  onUpdate: (data: {blob: Blob; dataURL: string; fileName?: string}) => void
+  onUpdate: SnekStudioProps['onComplete']
 }
 
 const ImageViewer: React.FC<ImageViewerProps> = props => {
@@ -128,11 +129,7 @@ const ImageViewer: React.FC<ImageViewerProps> = props => {
                     src={props.src}
                     name={props.name}
                     isOpen={isSnekStudioOpen}
-                    onComplete={async (blob, dataURL, fileName) => {
-                      if (blob && dataURL) {
-                        props.onUpdate({blob, dataURL, fileName})
-                      }
-                    }}
+                    onComplete={props.onUpdate}
                     shouldClose={handleCloseSnekStudio}
                   />
                 ) : (

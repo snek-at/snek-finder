@@ -1,6 +1,10 @@
 import {DeleteIcon} from '@chakra-ui/icons'
 import {Box} from '@chakra-ui/layout'
 import {
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  Button,
   Drawer,
   DrawerBody,
   DrawerCloseButton,
@@ -25,8 +29,10 @@ import {FaFile} from '@react-icons/all-files/fa/FaFile'
 import {FaFilePdf} from '@react-icons/all-files/fa/FaFilePdf'
 import {FaFolder} from '@react-icons/all-files/fa/FaFolder'
 import update from 'immutability-helper'
-import React, {MouseEvent, useEffect, useState} from 'react'
+import React, {MouseEvent, useEffect, useMemo, useState} from 'react'
 import {FileRejection, useDropzone} from 'react-dropzone'
+import {LazyLoadImage} from 'react-lazy-load-image-component'
+
 import {isValidHttpUrl} from '../../../common/url'
 import {uuidv4} from '../../../common/uuid'
 import ContextModal from '../../molecules/ContextModal'
@@ -41,6 +47,8 @@ import {FinderData, FinderFileItem, FinderFolderItem, FinderMode} from './types'
 
 import {getFileType} from '../../../common/getFileType'
 import {MimeTypes} from '../../../common/mimeTypes'
+import ImagePreviewWarningAlert from '../../molecules/ImagePreviewWarningAlert'
+import {flushSync} from 'react-dom'
 
 export type SnekFinderProps = {
   mode?: FinderMode
@@ -50,7 +58,10 @@ export type SnekFinderProps = {
   rootUUID: string
   onItemOpen: (uuid: string) => void
   onDataChanged: (data: FinderData) => Promise<void>
-  onUploadFile: (file: File) => Promise<string>
+  onUploadFile: (file: File) => Promise<{
+    src: string
+    previewSrc?: string
+  }>
 }
 
 const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
@@ -69,6 +80,7 @@ const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
 
   const updateData = (newData: FinderData) => {
     setData(newData)
+
     props.onDataChanged(newData)
   }
 
@@ -84,6 +96,22 @@ const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
     spawnX: number
     spawnY: number
   } | null>(null)
+
+  const imagesWithoutPreview = useMemo(() => {
+    const imagesWithoutPreview: string[] = []
+
+    for (const [uuid, item] of Object.entries(data)) {
+      const fileItem = item as FinderFileItem
+
+      if (fileItem.mimeType && fileItem.mimeType.startsWith('image/')) {
+        if (!fileItem.previewSrc) {
+          imagesWithoutPreview.push(uuid)
+        }
+      }
+    }
+
+    return imagesWithoutPreview
+  }, [data])
 
   const switchParentNode = (uuid: string) => {
     // find uuid in parentNodeHistory and remove it and all following elements
@@ -184,16 +212,7 @@ const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
 
     const todayDate = new Date().toDateString()
 
-    const files: {
-      [uuid: string]: {
-        name: string
-        createdAt: string
-        modifiedAt: string
-        src: string
-        mimeType: string
-        size: string
-      }
-    } = {}
+    const files: FinderData = {}
 
     for (const [i, file] of acceptedFiles.entries()) {
       const {name, size} = file
@@ -229,13 +248,14 @@ const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
 
       const fileName = name.split('.')[0]
 
-      const src = await props.onUploadFile(file)
+      const uploaded = await props.onUploadFile(file)
 
       files[uuidv4()] = {
         name: fileName,
         createdAt: todayDate,
         modifiedAt: todayDate,
-        src,
+        src: uploaded.src,
+        previewSrc: uploaded.previewSrc,
         mimeType: fileType.mime,
         size: sizeString
       }
@@ -251,6 +271,8 @@ const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
     let newData
 
     for (const [uuid, file] of Object.entries(files)) {
+      // if file is image create preview if not already created
+
       newData = update(data, {
         [rootUUID]: {
           childUUIDs: {$push: [uuid]}
@@ -415,10 +437,15 @@ const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
       if (folderItem.isFolder) {
         prefix = <Icon as={FaFolder} boxSize="16" />
       } else {
-        const {mimeType, src} = fileItem
+        const {mimeType, previewSrc, src} = fileItem
 
         if (mimeType && mimeType.startsWith('image/')) {
-          prefix = <Image boxSize="16" src={src}></Image>
+          prefix = (
+            <Image
+              as={LazyLoadImage}
+              boxSize="16"
+              src={previewSrc || src}></Image>
+          )
         } else if (mimeType && mimeType.startsWith('application/pdf')) {
           prefix = <Icon as={FaFilePdf} boxSize="16" />
         } else {
@@ -638,9 +665,52 @@ const Finder: React.FC<SnekFinderProps> = ({mode = 'browser', ...props}) => {
     )
   }
 
+  console.log(imagesWithoutPreview)
+
   return (
     <>
       {finderExtras}
+
+      {imagesWithoutPreview.length > 0 && (
+        <ImagePreviewWarningAlert
+          imageCount={imagesWithoutPreview.length}
+          onGeneratePreviews={async () => {
+            // loop through imagesWithoutPreview and create preview for each
+
+            const newData = {...data}
+
+            for (const uuid of imagesWithoutPreview) {
+              const fileItem = newData[uuid] as FinderFileItem
+
+              if (fileItem.mimeType && fileItem.mimeType.startsWith('image/')) {
+                if (!fileItem.previewSrc) {
+                  // download image and create preview
+                  const fileBlob = await fetch(fileItem.src).then(r => r.blob())
+
+                  const uploaded = await props.onUploadFile(
+                    new File([fileBlob], `preview_${fileItem.name}`, {
+                      type: fileItem.mimeType
+                    })
+                  )
+
+                  fileItem.previewSrc = uploaded.previewSrc
+
+                  newData[uuid] = fileItem
+
+                  await new Promise(resolve => setTimeout(resolve, 1000))
+                }
+              } else {
+                console.log('not image', fileItem)
+              }
+
+              console.log('newData', newData[uuid])
+
+              updateData({...newData})
+            }
+          }}
+        />
+      )}
+
       <Toolbar
         view="LIST"
         onViewToggleClick={() => null}

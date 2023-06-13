@@ -3,7 +3,10 @@ import {FinderData} from '../components/organisms/Finder/types'
 export abstract class Backend {
   public abstract indexKey: string
 
-  abstract upload(file: File): Promise<any>
+  abstract upload(file: File): Promise<{
+    src: string
+    previewSrc?: string
+  }>
 
   async readIndex() {
     if (typeof window === 'undefined') {
@@ -38,7 +41,11 @@ export abstract class Backend {
     if (index) {
       const indexFile = new File(
         [JSON.stringify(index || {})],
-        `${Date.now()}.json`
+
+        `${Date.now()}.json`,
+        {
+          type: 'application/json'
+        }
       )
 
       return await this.upload(indexFile)
