@@ -9,16 +9,24 @@ import {
 } from './components/organisms/Finder/types'
 import ImageViewer from './components/organisms/ImageViewer'
 import {useSnekFinderContext} from './SnekFinderProvider'
+import SnekStudio, {SavedImageData} from './components/molecules/SnekStudio'
+import {Box, Modal, ModalContent, ModalOverlay} from '@chakra-ui/react'
 
 export interface IUseSnekFinderArgs {
   mode: FinderMode
   onSelect?: (file: FinderFileItem) => void
+  onSnekStudioUpdate?: (
+    file: File,
+    newSrc: string,
+    editedImageObject: SavedImageData
+  ) => void
 }
 
 export interface IUseSnekFinder {
   finderElement: JSX.Element
   toggleSelector: () => void
   toggleSelectorPreview: (fileId: string) => void
+  toggleSnekStudio: (src: string, name: string) => void
 }
 
 export const useSnekFinder = ({
@@ -53,12 +61,14 @@ export const useSnekFinder = ({
   }, [isSelectorOpen])
 
   const [openFile, setOpenFile] = React.useState<{
-    fileId: string
-    previewType: 'IMAGE_VIEWER' | 'PDF_VIEWER'
+    fileId?: string
+    src?: string
+    name?: string
+    previewType: 'IMAGE_VIEWER' | 'PDF_VIEWER' | 'SNEK_STUDIO'
   } | null>(null)
 
   const openedFileItem = React.useMemo(() => {
-    if (!openFile) {
+    if (!openFile || !openFile.fileId) {
       return null
     }
 
@@ -100,6 +110,15 @@ export const useSnekFinder = ({
     [data, setOpenFile]
   )
 
+  const toggleSnekStudio = React.useCallback(
+    (src: string, name: string) => {
+      setOpenFile(null)
+      setIsSelectorOpen(false)
+      setOpenFile({fileId: '', previewType: 'SNEK_STUDIO', src, name})
+    },
+    [setOpenFile, isSelectorOpen, setIsSelectorOpen]
+  )
+
   const handleFinderClose = React.useCallback(() => {
     setOpenFile(null)
     setIsSelectorOpen(false)
@@ -125,68 +144,111 @@ export const useSnekFinder = ({
     [toggleSelector]
   )
 
+  console.log(openFile)
+
   const finderElement = (
     <>
-      {openFile && openedFileItem && (
+      {openFile && (
         <>
-          {openFile.previewType === 'IMAGE_VIEWER' && (
-            <ImageViewer
-              src={openedFileItem.src}
-              name={openedFileItem.name}
-              onUpdate={async (
-                blob,
-                {fullName, imageBase64, extension, mimeType}
-              ) => {
-                const fileId = openFile.fileId
-
-                setData(data => {
-                  if (fullName) {
-                    return {
-                      ...data,
-                      [fileId]: {
-                        ...data[fileId],
-                        src: imageBase64!,
-                        name: fullName
-                      }
-                    }
-                  } else {
-                    return {
-                      ...data,
-                      [fileId]: {
-                        ...data[fileId],
-                        src: imageBase64!
-                      }
-                    }
-                  }
-                })
-
-                // upload blob to backend
-                if (blob) {
-                  const uploaded = await backend.upload(
-                    new File([blob], openedFileItem.name, {
-                      type: mimeType
-                    })
-                  )
+          {openedFileItem &&
+            openFile.previewType === 'IMAGE_VIEWER' &&
+            openFile.fileId && (
+              <ImageViewer
+                src={openedFileItem.src}
+                name={openedFileItem.name}
+                onUpdate={async (
+                  blob,
+                  {fullName, imageBase64, extension, mimeType}
+                ) => {
+                  const fileId = openFile.fileId!
 
                   setData(data => {
-                    const newData = {
-                      ...data,
-                      [fileId]: {
-                        ...data[fileId],
-                        src: uploaded.src,
-                        previewSrc: uploaded.previewSrc
+                    if (fullName) {
+                      return {
+                        ...data,
+                        [fileId]: {
+                          ...data[fileId],
+                          src: imageBase64!,
+                          name: fullName
+                        }
+                      }
+                    } else {
+                      return {
+                        ...data,
+                        [fileId]: {
+                          ...data[fileId],
+                          src: imageBase64!
+                        }
                       }
                     }
-
-                    backend.writeIndex(newData)
-
-                    return newData
                   })
-                }
-              }}
-              onClose={() => setOpenFile(null)}
-            />
+
+                  // upload blob to backend
+                  if (blob) {
+                    const uploaded = await backend.upload(
+                      new File([blob], openedFileItem.name, {
+                        type: mimeType
+                      })
+                    )
+
+                    setData(data => {
+                      const newData = {
+                        ...data,
+                        [fileId]: {
+                          ...data[fileId],
+                          src: uploaded.src,
+                          previewSrc: uploaded.previewSrc
+                        }
+                      }
+
+                      backend.writeIndex(newData)
+
+                      return newData
+                    })
+                  }
+                }}
+                onClose={() => setOpenFile(null)}
+              />
+            )}
+
+          {openFile.previewType === 'SNEK_STUDIO' && (
+            <Modal isOpen={true} onClose={() => setOpenFile(null)} size="full">
+              <ModalOverlay />
+              <ModalContent rounded="none" my="8" boxSize="full">
+                <SnekStudio
+                  isOpen={true}
+                  src={openFile.src!}
+                  name={openFile.name!}
+                  shouldClose={() => setOpenFile(null)}
+                  onComplete={async (blob, editedImageObject) => {
+                    if (!blob) {
+                      throw new Error('blob is required')
+                    }
+
+                    const file = new File(
+                      [blob],
+                      editedImageObject.fullName || editedImageObject.name,
+                      {
+                        type: editedImageObject.mimeType
+                      }
+                    )
+
+                    const uploaded = await backend.upload(file)
+
+                    props.onSnekStudioUpdate &&
+                      props.onSnekStudioUpdate(
+                        file,
+                        uploaded.src,
+                        editedImageObject
+                      )
+
+                    setOpenFile(null)
+                  }}
+                />
+              </ModalContent>
+            </Modal>
           )}
+
           {/* {openFile.previewType === 'PDF_VIEWER' && (
             <PdfViewer
               src={openedFileItem.src}
@@ -197,7 +259,7 @@ export const useSnekFinder = ({
           )} */}
         </>
       )}
-      {!(mode === 'selector' && !isSelectorOpen) && (
+      {!(mode === 'selector' && !isSelectorOpen) && mode !== 'editor' && (
         <Finder
           data={data}
           mode={mode}
@@ -215,6 +277,7 @@ export const useSnekFinder = ({
   return {
     finderElement,
     toggleSelector,
-    toggleSelectorPreview
+    toggleSelectorPreview,
+    toggleSnekStudio
   }
 }

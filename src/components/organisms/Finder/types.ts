@@ -5,7 +5,7 @@ type BasicItem = {
   description?: string
 }
 
-export type FinderMode = 'browser' | 'selector'
+export type FinderMode = 'browser' | 'selector' | 'editor'
 
 export interface FinderFolderItem extends BasicItem {
   isFolder: true

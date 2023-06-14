@@ -32,7 +32,7 @@ export default {
     Story => (
       <SnekFinderProvider
         backend={OSGBackend}
-        initDataLink="https://osg.snek.at/storage/BQACAgQAAxkDAAIG7GIcqzzA1WVE78junWZTd0_QdCcDAALGCwACme_pUEsN3jeKXS9cIwQ"
+        initDataLink="https://osg.snek.at/storage/BQACAgQAAxkDAAIYw2SAUy3T82d6icvxMXW-BuBnBrGpAALsEAACfXIAAVDTYCO5gif6AS8E"
         rootFileId="ae4b3bf8-6ed2-4ac6-bf18-722321af298c">
         <>
           <IndexController />
@@ -77,4 +77,33 @@ export const SmallElement = () => {
   })
 
   return <Box h="500px">{finderElement}</Box>
+}
+
+export const SnekStudio = () => {
+  const {finderElement, toggleSnekStudio} = useSnekFinder({
+    mode: 'editor',
+    onSnekStudioUpdate: (file, newSrc, editedImageObject) => {
+      console.log('onSnekStudioUpdate')
+      console.log(file)
+      console.log(newSrc)
+      console.log(editedImageObject)
+    }
+  })
+
+  console.log(finderElement)
+
+  return (
+    <>
+      {finderElement}
+      <Button
+        onClick={() =>
+          toggleSnekStudio(
+            'https://fastly.picsum.photos/id/798/536/354.jpg?hmac=G7WN49OaaiBgJFNQzJSajzPX1H_eOGD8eTuvWQlhzVI',
+            'test'
+          )
+        }>
+        Open SnekStudio
+      </Button>
+    </>
+  )
 }

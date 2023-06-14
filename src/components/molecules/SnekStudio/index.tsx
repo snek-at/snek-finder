@@ -1,5 +1,9 @@
 //@ts-ignore
+import {Box} from '@chakra-ui/react'
 import React from 'react'
+
+import './style.css'
+
 import FilerobotImageEditor, {TABS} from 'react-filerobot-image-editor'
 
 export type SavedImageData = {
@@ -42,36 +46,43 @@ const SnekStudio: React.FC<SnekStudioProps> = ({
   }
 
   return (
-    <FilerobotImageEditor
-      defaultSavedImageName={name}
-      showBackButton
-      closeAfterSave
-      savingPixelRatio={0}
-      previewPixelRatio={0}
-      source={src}
-      onSave={(editedImageObject, designState) => {
-        const {imageBase64, imageCanvas} = editedImageObject
-
-        if (imageCanvas && imageBase64) {
-          imageCanvas.toBlob(blob => {
-            onComplete(blob, editedImageObject)
-          })
+    <Box
+      sx={{
+        '.SfxModal-Wrapper': {
+          zIndex: '9999999 !important'
         }
-      }}
-      onClose={shouldClose}
-      annotationsCommon={{
-        fill: '#ff0000'
-      }}
-      Text={{text: 'Text...'}}
-      tabsIds={[
-        TABS.RESIZE,
-        TABS.ADJUST,
-        TABS.FILTERS,
-        TABS.FINETUNE,
-        TABS.ANNOTATE,
-        TABS.WATERMARK
-      ]}
-    />
+      }}>
+      <FilerobotImageEditor
+        defaultSavedImageName={name}
+        showBackButton
+        closeAfterSave
+        savingPixelRatio={0}
+        previewPixelRatio={0}
+        source={src}
+        onSave={(editedImageObject, designState) => {
+          const {imageBase64, imageCanvas} = editedImageObject
+
+          if (imageCanvas && imageBase64) {
+            imageCanvas.toBlob(blob => {
+              onComplete(blob, editedImageObject)
+            })
+          }
+        }}
+        onClose={shouldClose}
+        annotationsCommon={{
+          fill: '#ff0000'
+        }}
+        Text={{text: 'Text...'}}
+        tabsIds={[
+          TABS.RESIZE,
+          TABS.ADJUST,
+          TABS.FILTERS,
+          TABS.FINETUNE,
+          TABS.ANNOTATE,
+          TABS.WATERMARK
+        ]}
+      />
+    </Box>
   )
 }
 
